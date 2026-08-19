@@ -159,7 +159,7 @@ function LoadingScreen({ darkMode, quotes }) {
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard')
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(window.innerWidth < 768)
   const [darkMode, setDarkMode] = useState(false)
   const [selectedNumberForChart, setSelectedNumberForChart] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -978,23 +978,31 @@ function App() {
     <div className={`min-h-screen ${darkMode ? 'bg-slate-900' : 'bg-slate-50'}`}>
       {isLoading && <LoadingScreen darkMode={darkMode} quotes={data.quotes} />}
       
-      <div className={`flex h-screen ${isLoading ? 'opacity-0 pointer-events-none' : 'opacity-100'} transition-opacity duration-500`}>
-        <aside className={`${sidebarCollapsed ? 'w-16' : 'w-56'} ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-100 border-slate-200'} border-r flex flex-col transition-all duration-300`}>
+      <div className={`flex flex-col md:flex-row h-screen ${isLoading ? 'opacity-0 pointer-events-none' : 'opacity-100'} transition-opacity duration-500`}>
+        {/* Mobile menu button */}
+        <div className="md:hidden fixed top-4 left-4 z-50">
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className={`p-3 rounded-lg ${darkMode ? 'bg-slate-800 text-white' : 'bg-white text-slate-900'} shadow-lg`}
+          >
+            {sidebarCollapsed ? <Menu size={20} /> : <X size={20} />}
+          </button>
+        </div>
+        
+        <aside className={`${sidebarCollapsed ? 'hidden md:flex' : 'flex'} w-full md:w-56 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-100 border-slate-200'} border-r flex flex-col transition-all duration-300 md:h-full h-auto`}>
           <div className={`p-4 ${darkMode ? 'border-slate-700' : 'border-slate-200'} border-b flex items-center justify-between`}>
-            {!sidebarCollapsed && (
-              <div>
-                <h1 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Tracker Pro</h1>
-                <p className={`text-sm mt-1 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Performance Tracking</p>
-              </div>
-            )}
+            <div>
+              <h1 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Tracker Pro</h1>
+              <p className={`text-sm mt-1 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Performance Tracking</p>
+            </div>
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className={`p-2 rounded-lg ${darkMode ? 'hover:bg-slate-700 text-slate-400hover:text-white' : 'hover:bg-slate-200 text-slate-600'}`}
+              className={`hidden md:block p-2 rounded-lg ${darkMode ? 'hover:bg-slate-700 text-slate-400hover:text-white' : 'hover:bg-slate-200 text-slate-600'}`}
             >
               {sidebarCollapsed ? <Menu size={20} /> : <X size={20} />}
             </button>
           </div>
-          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+          <nav className="flex-1 p-4 space-y-2 overflow-y-auto overflow-x-hidden">
             {sectionOrder.map((section) => {
               const config = sectionConfig[section]
               const Icon = config.icon
@@ -1010,17 +1018,17 @@ function App() {
                 >
                   <button
                     onClick={() => setActiveTab(section)}
-                    className={`w-full px-3 py-3 rounded-lg text-left font-medium transition-all flex items-center ${
+                    className={`w-full px-3 py-2 md:py-3 rounded-lg text-left font-medium transition-all flex items-center ${
                       activeTab === section 
                         ? 'bg-blue-600 text-white' 
                         : darkMode ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-200'
                     } ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}
                     title={sidebarCollapsed ? config.label : ''}
                   >
-                    <Icon size={18} />
-                    {!sidebarCollapsed && <span>{config.label}</span>}
+                    <Icon size={16} />
+                    {!sidebarCollapsed && <span className="text-sm md:text-base">{config.label}</span>}
                     {!sidebarCollapsed && section !== 'dashboard' && (
-                      <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity cursor-grab">
+                      <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity cursor-grab hidden md:block">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <circle cx="9" cy="5" r="1" />
                           <circle cx="9" cy="12" r="1" />
@@ -1038,8 +1046,8 @@ function App() {
           </nav>
         </aside>
         <main className={`flex-1 overflow-auto ${darkMode ? 'bg-slate-900' : 'bg-slate-50'}`}>
-          <div className="p-8">
-            <div className="flex justify-end gap-2 mb-4">
+          <div className="p-4 md:p-8">
+            <div className="flex flex-col md:flex-row justify-end gap-2 mb-4">
               <button
                 onClick={exportData}
                 className={`px-4 py-2 ${darkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-white text-slate-700 hover:bg-slate-100'} rounded-lg border ${darkMode ? 'border-slate-700' : 'border-slate-200'} flex items-center gap-2 transition-colors`}
