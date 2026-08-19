@@ -4593,24 +4593,26 @@ function Chatbot({ data, darkMode }) {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [apiKey, setApiKey] = useState('')
-  const [model, setModel] = useState('llama-3.3-70b-versatile')
+  const [model, setModel] = useState('meta-llama/llama-3.1-70b-instruct')
   const [showSettings, setShowSettings] = useState(false)
 
   // Load API key from localStorage
   useEffect(() => {
-    const savedKey = localStorage.getItem('groqApiKey')
-    if (savedKey) setApiKey(savedKey)
-    const savedModel = localStorage.getItem('groqModel')
+    const savedKey = localStorage.getItem('openrouterApiKey')
+    if (savedKey) setApiKey(savedKey.trim())
+    const savedModel = localStorage.getItem('openrouterModel')
     if (savedModel) setModel(savedModel)
   }, [])
 
-  // Save API key to localStorage
+  // Save API key to localStorage (only if valid)
   useEffect(() => {
-    if (apiKey) localStorage.setItem('groqApiKey', apiKey)
+    if (apiKey && apiKey.trim().length > 0) {
+      localStorage.setItem('openrouterApiKey', apiKey.trim())
+    }
   }, [apiKey])
 
   useEffect(() => {
-    localStorage.setItem('groqModel', model)
+    localStorage.setItem('openrouterModel', model)
   }, [model])
 
   const prepareDataContext = () => {
@@ -4700,7 +4702,15 @@ function Chatbot({ data, darkMode }) {
 
   const sendMessage = async (e) => {
     e.preventDefault()
-    if (!input.trim() || !apiKey) return
+    
+    // Validate API key
+    const trimmedApiKey = apiKey.trim()
+    if (!input.trim() || !trimmedApiKey) {
+      if (!trimmedApiKey) {
+        setMessages(prev => [...prev, { role: 'assistant', content: 'Please enter your Groq API key in Settings first.' }])
+      }
+      return
+    }
 
     const userMessage = input.trim()
     setInput('')
@@ -4719,10 +4729,15 @@ Please analyze this data and answer my questions. Be specific and use the actual
 
 Provide your answers in a clear, conversational format.`
 
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      // Debug: log API key info (without exposing the full key)
+      console.log('API Key length:', trimmedApiKey.length)
+      console.log('API Key starts with:', trimmedApiKey.substring(0, 10) + '...')
+      console.log('Model being used:', model)
+
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          'Authorization': `Bearer ${trimmedApiKey}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -4738,7 +4753,9 @@ Provide your answers in a clear, conversational format.`
       })
 
       if (!response.ok) {
-        throw new Error(`API error: ${response.status}`)
+        const errorText = await response.text()
+        console.error('API response error:', response.status, errorText)
+        throw new Error(`API error: ${response.status} - ${errorText}`)
       }
 
       const result = await response.json()
@@ -4747,6 +4764,11 @@ Provide your answers in a clear, conversational format.`
       setMessages(prev => [...prev, { role: 'assistant', content: assistantMessage }])
     } catch (error) {
       console.error('Chatbot error:', error)
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      })
       setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${error.message}. Please check your API key and try again.` }])
     } finally {
       setLoading(false)
@@ -4755,6 +4777,11 @@ Provide your answers in a clear, conversational format.`
 
   const clearChat = () => {
     setMessages([])
+  }
+
+  const clearApiKey = () => {
+    setApiKey('')
+    localStorage.removeItem('openrouterApiKey')
   }
 
   return (
@@ -4781,18 +4808,26 @@ Provide your answers in a clear, conversational format.`
         <div className={`mb-4 p-4 ${darkMode ? 'bg-slate-700' : 'bg-slate-50'} rounded-lg space-y-3`}>
           <div>
             <label className={`block text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'} mb-1`}>
-              Groq API Key
+              OpenRouter API Key
             </label>
             <input
               type="text"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
-              placeholder="gsk_..."
+              placeholder="sk-or-v1-..."
               className={`w-full px-3 py-2 text-sm ${darkMode ? 'bg-slate-600 border-slate-500 text-white' : 'bg-white border-slate-300 text-slate-900'} border rounded-lg`}
             />
-            <p className={`text-xs ${darkMode ? 'text-slate-500' : 'text-slate-400'} mt-1`}>
-              Get your free API key at <a href="https://console.groq.com" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">console.groq.com</a>
-            </p>
+            <div className="flex gap-2 mt-2">
+              <p className={`text-xs ${darkMode ? 'text-slate-500' : 'text-slate-400'} flex-1`}>
+                Get your API key at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">openrouter.ai/keys</a>
+              </p>
+              <button
+                onClick={clearApiKey}
+                className={`px-2 py-1 text-xs ${darkMode ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-red-500 text-white hover:bg-red-600'} rounded transition-colors`}
+              >
+                Clear Key
+              </button>
+            </div>
           </div>
           
           <div>
@@ -4804,10 +4839,12 @@ Provide your answers in a clear, conversational format.`
               onChange={(e) => setModel(e.target.value)}
               className={`w-full px-3 py-2 text-sm ${darkMode ? 'bg-slate-600 border-slate-500 text-white' : 'bg-white border-slate-300 text-slate-900'} border rounded-lg`}
             >
-              <option value="llama-3.3-70b-versatile">Llama 3.3 70B (Versatile)</option>
-              <option value="llama-3.1-8b-instant">Llama 3.1 8B (Fast)</option>
-              <option value="mixtral-8x7b-32768">Mixtral 8x7B</option>
-              <option value="gemma2-9b-it">Gemma 2 9B</option>
+              <option value="meta-llama/llama-3.1-70b-instruct">Llama 3.1 70B (Versatile)</option>
+              <option value="meta-llama/llama-3.1-8b-instruct">Llama 3.1 8B (Fast)</option>
+              <option value="meta-llama/llama-3-70b-instruct">Llama 3 70B</option>
+              <option value="meta-llama/llama-3-8b-instruct">Llama 3 8B</option>
+              <option value="mistralai/mistral-7b-instruct">Mistral 7B</option>
+              <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
             </select>
           </div>
         </div>
