@@ -983,7 +983,7 @@ function App() {
         <div className="md:hidden fixed top-4 left-4 z-50">
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className={`p-3 rounded-lg ${darkMode ? 'bg-slate-800 text-white' : 'bg-white text-slate-900'} shadow-lg`}
+            className={`p-3 rounded-lg ${darkMode ? 'bg-slate-800/50 text-white' : 'bg-white/50 text-slate-900'} shadow-lg backdrop-blur-sm`}
           >
             {sidebarCollapsed ? <Menu size={20} /> : <X size={20} />}
           </button>
