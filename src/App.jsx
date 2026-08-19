@@ -1017,7 +1017,10 @@ function App() {
                   className={`relative group ${draggedSection === section ? 'opacity-50' : ''} ${section === 'dashboard' ? 'cursor-default' : ''}`}
                 >
                   <button
-                    onClick={() => setActiveTab(section)}
+                    onClick={() => {
+                      setActiveTab(section)
+                      setSidebarCollapsed(true)
+                    }}
                     className={`w-full px-3 py-2 md:py-3 rounded-lg text-left font-medium transition-all flex items-center ${
                       activeTab === section 
                         ? 'bg-blue-600 text-white' 
