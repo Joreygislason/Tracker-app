@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Plus, TrendingUp, Dumbbell, BookOpen, Calendar, ChevronLeft, ChevronRight, Menu, X, Target, Flame, Search, BarChart3, LineChart, PieChart, Download, Upload, Moon, Sun, Edit2, Trash2, BarChart2, MessageSquare, Loader2, Star, Check, Zap } from 'lucide-react'
 import { LineChart as RechartsLineChart, Line, BarChart, Bar, PieChart as RechartsPieChart, Pie, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts'
 
-const quotes = [
+const defaultQuotes = [
   "Action is the foundational key to all success. — Pablo Picasso",
   "You don't have to be extreme, just consistent. — Anonymous",
   "Amateurs sit and wait for inspiration, the rest of us just get up and go to work. — Stephen King",
@@ -105,14 +105,15 @@ const quotes = [
   "An unexamined life is not worth living. — Socrates"
 ]
 
-function LoadingScreen({ darkMode }) {
+function LoadingScreen({ darkMode, quotes }) {
   const [quote, setQuote] = useState('')
   const [loadingProgress, setLoadingProgress] = useState(0)
 
   useEffect(() => {
-    const randomQuote = quotes[Math.floor(Math.random() * quotes.length)]
+    const quotesArray = quotes && quotes.length > 0 ? quotes.map(q => q.text) : defaultQuotes
+    const randomQuote = quotesArray[Math.floor(Math.random() * quotesArray.length)]
     setQuote(randomQuote)
-  }, [])
+  }, [quotes])
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -163,7 +164,7 @@ function App() {
   const [selectedNumberForChart, setSelectedNumberForChart] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [sectionOrder, setSectionOrder] = useState([
-    'dashboard', 'metrics', 'workouts', 'journal', 'skates', 'calendar', 'goalsetter', 'onerm', 'analytics', 'chatbot'
+    'dashboard', 'metrics', 'workouts', 'journal', 'skates', 'calendar', 'goalsetter', 'onerm', 'analytics', 'chatbot', 'quotes'
   ])
   const [draggedSection, setDraggedSection] = useState(null)
   const [data, setData] = useState({
@@ -179,7 +180,8 @@ function App() {
     deletedItems: [],
     actionHistory: [],
     targets: [],
-    targetHistory: []
+    targetHistory: [],
+    quotes: []
   })
 
   const logAction = (action, itemType, itemName, details = {}) => {
@@ -243,7 +245,8 @@ function App() {
             deletedItems: Array.isArray(parsedData.deletedItems) ? parsedData.deletedItems : [],
             actionHistory: Array.isArray(parsedData.actionHistory) ? parsedData.actionHistory : [],
             targets: Array.isArray(parsedData.targets) ? parsedData.targets : [],
-            targetHistory: Array.isArray(parsedData.targetHistory) ? parsedData.targetHistory : []
+            targetHistory: Array.isArray(parsedData.targetHistory) ? parsedData.targetHistory : [],
+            quotes: Array.isArray(parsedData.quotes) && parsedData.quotes.length > 0 ? parsedData.quotes : defaultQuotes.map((text, index) => ({ id: index, text }))
           }
           
           // Cleanup deleted items older than 2 days
@@ -281,7 +284,7 @@ function App() {
           // Filter out 'goals' from saved section order if it exists
           const filteredOrder = Array.isArray(parsedOrder) 
             ? parsedOrder.filter(section => section !== 'goals')
-            : ['dashboard', 'metrics', 'workouts', 'journal', 'skates', 'calendar', 'onerm', 'analytics', 'chatbot', 'history']
+            : ['dashboard', 'metrics', 'workouts', 'journal', 'skates', 'calendar', 'onerm', 'analytics', 'chatbot', 'quotes', 'history']
           setSectionOrder(filteredOrder)
         } catch (e) {
           console.error('Error parsing section order:', e)
@@ -352,7 +355,8 @@ function App() {
     goalsetter: { icon: Target, label: 'Goal Setter' },
     onerm: { icon: BarChart2, label: '1RM Calculator' },
     analytics: { icon: BarChart3, label: 'Analytics' },
-    chatbot: { icon: MessageSquare, label: 'Personal Assistant' }
+    chatbot: { icon: MessageSquare, label: 'Personal Assistant' },
+    quotes: { icon: Star, label: 'Quotes' }
   }
 
   const addNumberEntry = (name, value, pinned = false) => {
@@ -866,6 +870,36 @@ function App() {
     }
   }
 
+  const addQuote = (quote) => {
+    const id = Date.now()
+    setData(prev => ({
+      ...prev,
+      quotes: [...prev.quotes, { id, text: quote }]
+    }))
+    logAction('added', 'quote', quote.substring(0, 30) + '...', { text: quote })
+  }
+
+  const deleteQuote = (id) => {
+    const quote = data.quotes.find(q => q.id === id)
+    if (quote) {
+      setData(prev => ({
+        ...prev,
+        quotes: prev.quotes.filter(q => q.id !== id)
+      }))
+      logAction('deleted', 'quote', quote.text.substring(0, 30) + '...', { text: quote.text })
+    }
+  }
+
+  const resetQuotes = () => {
+    if (confirm('Are you sure you want to reset quotes to default? All custom quotes will be removed.')) {
+      setData(prev => ({
+        ...prev,
+        quotes: defaultQuotes.map((text, index) => ({ id: index, text }))
+      }))
+      logAction('reset', 'quotes', 'All quotes', { count: defaultQuotes.length })
+    }
+  }
+
   const exportData = () => {
     const dataStr = JSON.stringify(data, null, 2)
     const dataBlob = new Blob([dataStr], { type: 'application/json' })
@@ -942,7 +976,7 @@ function App() {
 
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-slate-900' : 'bg-slate-50'}`}>
-      {isLoading && <LoadingScreen darkMode={darkMode} />}
+      {isLoading && <LoadingScreen darkMode={darkMode} quotes={data.quotes} />}
       
       <div className={`flex h-screen ${isLoading ? 'opacity-0 pointer-events-none' : 'opacity-100'} transition-opacity duration-500`}>
         <aside className={`${sidebarCollapsed ? 'w-16' : 'w-56'} ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-100 border-slate-200'} border-r flex flex-col transition-all duration-300`}>
@@ -1049,6 +1083,9 @@ function App() {
             {activeTab === 'chatbot' && (
               <Chatbot data={data} darkMode={darkMode} />
             )}
+            {activeTab === 'quotes' && (
+              <QuotesView data={data} onAdd={addQuote} onDelete={deleteQuote} onReset={resetQuotes} darkMode={darkMode} />
+            )}
           </div>
         </main>
       </div>
@@ -1059,13 +1096,14 @@ function App() {
 function Dashboard({ data, onSelectNumber, onNavigateToAnalytics, darkMode }) {
   // Get daily motivational quote based on day of year
   const getDailyQuote = () => {
+    const quotesArray = data.quotes && data.quotes.length > 0 ? data.quotes.map(q => q.text) : defaultQuotes
     const now = new Date()
     const startOfYear = new Date(now.getFullYear(), 0, 0)
     const diff = now - startOfYear
     const oneDay = 1000 * 60 * 60 * 24
     const dayOfYear = Math.floor(diff / oneDay)
-    const quoteIndex = dayOfYear % quotes.length
-    return quotes[quoteIndex]
+    const quoteIndex = dayOfYear % quotesArray.length
+    return quotesArray[quoteIndex]
   }
 
   const dailyQuote = getDailyQuote()
@@ -5400,6 +5438,104 @@ function GoalSetterView({ targets, targetHistory, onAdd, onUpdate, onDelete, onD
           <p>No targets yet. Create your first target to get started!</p>
         </div>
       )}
+    </div>
+  )
+}
+
+function QuotesView({ data, onAdd, onDelete, onReset, darkMode }) {
+  const [newQuote, setNewQuote] = useState('')
+  const [generatedQuote, setGeneratedQuote] = useState('')
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    if (newQuote.trim()) {
+      onAdd(newQuote.trim())
+      setNewQuote('')
+    }
+  }
+
+  const generateRandomQuote = () => {
+    const quotes = data.quotes && data.quotes.length > 0 ? data.quotes : defaultQuotes.map((text, index) => ({ id: index, text }))
+    if (quotes.length > 0) {
+      const randomQuote = quotes[Math.floor(Math.random() * quotes.length)]
+      setGeneratedQuote(randomQuote.text)
+    }
+  }
+
+  const quotes = data.quotes && data.quotes.length > 0 ? data.quotes : []
+
+  return (
+    <div className="space-y-6">
+      <div className={`${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-lg shadow-sm border p-6`}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Generate Quote</h2>
+          <button
+            onClick={generateRandomQuote}
+            className={`px-4 py-2 ${darkMode ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-blue-500 text-white hover:bg-blue-600'} rounded-lg transition-colors`}
+          >
+            Generate
+          </button>
+        </div>
+        {generatedQuote && (
+          <div className={`text-center py-6 ${darkMode ? 'bg-slate-700' : 'bg-slate-50'} rounded-lg mb-4`}>
+            <p className={`text-xl italic ${darkMode ? 'text-white' : 'text-slate-900'}`}>"{generatedQuote}"</p>
+          </div>
+        )}
+      </div>
+
+      <div className={`${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-lg shadow-sm border p-6`}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Add New Quote</h2>
+          <button
+            onClick={onReset}
+            className={`text-sm px-3 py-1 ${darkMode ? 'bg-slate-700 text-slate-300 hover:bg-slate-600' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'} rounded transition-colors`}
+          >
+            Reset to Default
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <textarea
+              value={newQuote}
+              onChange={(e) => setNewQuote(e.target.value)}
+              placeholder="Enter a motivational quote..."
+              className={`w-full p-3 rounded-lg border ${darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'} focus:outline-none focus:border-blue-500`}
+              rows={3}
+            />
+          </div>
+          <button
+            type="submit"
+            className={`px-4 py-2 ${darkMode ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-blue-500 text-white hover:bg-blue-600'} rounded-lg transition-colors`}
+          >
+            Add Quote
+          </button>
+        </form>
+      </div>
+
+      <div className={`${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-lg shadow-sm border p-6`}>
+        <h2 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-slate-900'} mb-4`}>
+          Your Quotes ({quotes.length})
+        </h2>
+        {quotes.length > 0 ? (
+          <div className="space-y-3">
+            {quotes.map((quote) => (
+              <div key={quote.id} className={`p-4 ${darkMode ? 'bg-slate-700' : 'bg-slate-50'} rounded-lg flex items-start justify-between`}>
+                <p className={`${darkMode ? 'text-white' : 'text-slate-900'} flex-1`}>{quote.text}</p>
+                <button
+                  onClick={() => onDelete(quote.id)}
+                  className="ml-4 p-1 text-red-500 hover:bg-red-500/10 rounded transition-colors"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className={`text-center py-12 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+            <p>No custom quotes yet. Add your first quote above!</p>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
