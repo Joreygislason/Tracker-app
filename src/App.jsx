@@ -4746,14 +4746,19 @@ function Chatbot({ data, darkMode }) {
     try {
       const dataContext = prepareDataContext()
       
-      const systemPrompt = `You are a personal data analyst assistant. I have tracking data about my activities including skates, workouts, journal entries, goals, and numbers. 
+      const systemPrompt = `You are a helpful personal assistant with access to my tracking data. Speak naturally and conversationally, as if you're talking to me directly. Use "I" and "you" naturally - for example, say "You skated for 2 hours yesterday" instead of "The data shows a skate session of 2 hours."
 
 Here is my current data:
 ${JSON.stringify(dataContext, null, 2)}
 
-Please analyze this data and answer my questions. Be specific and use the actual data values. If the data doesn't support answering the question, say so clearly and suggest what data would be needed.
+When answering questions:
+- Be conversational and human-like
+- Summarize the key points without showing all the raw data unless I specifically ask for details
+- Use first person perspective when talking about my activities
+- Only show specific data values, dates, or numbers when I ask for them or when they're essential to the answer
+- If the data doesn't support answering the question, say so clearly and suggest what data would be needed
 
-Provide your answers in a clear, conversational format.`
+Keep your responses friendly, concise, and natural.`
 
       // Debug: log API key info (without exposing the full key)
       console.log('API Key length:', trimmedApiKey.length)
