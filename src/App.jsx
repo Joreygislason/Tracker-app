@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Plus, TrendingUp, Dumbbell, BookOpen, Calendar, ChevronLeft, ChevronRight, Menu, X, Target, Flame, Search, BarChart3, LineChart, PieChart, Download, Upload, Moon, Sun, Edit2, Trash2, BarChart2, MessageSquare, Loader2, Star, Check, Zap } from 'lucide-react'
+import { Plus, TrendingUp, Dumbbell, BookOpen, Calendar, ChevronLeft, ChevronRight, Menu, X, Target, Flame, Search, BarChart3, LineChart, PieChart, Download, Upload, Moon, Sun, Edit2, Trash2, BarChart2, MessageSquare, Loader2, Star, Check, Zap, Droplets } from 'lucide-react'
 import { LineChart as RechartsLineChart, Line, BarChart, Bar, PieChart as RechartsPieChart, Pie, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts'
 
 const defaultQuotes = [
@@ -164,7 +164,7 @@ function App() {
   const [selectedNumberForChart, setSelectedNumberForChart] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [sectionOrder, setSectionOrder] = useState([
-    'dashboard', 'metrics', 'workouts', 'journal', 'skates', 'calendar', 'goalsetter', 'onerm', 'analytics', 'chatbot', 'quotes'
+    'dashboard', 'metrics', 'skates', 'workouts', 'onerm', 'journal', 'goalsetter', 'hydration', 'quotes', 'calendar', 'analytics', 'chatbot'
   ])
   const [draggedSection, setDraggedSection] = useState(null)
   const [data, setData] = useState({
@@ -181,7 +181,8 @@ function App() {
     actionHistory: [],
     targets: [],
     targetHistory: [],
-    quotes: []
+    quotes: [],
+    hydration: []
   })
 
   const logAction = (action, itemType, itemName, details = {}) => {
@@ -246,7 +247,8 @@ function App() {
             actionHistory: Array.isArray(parsedData.actionHistory) ? parsedData.actionHistory : [],
             targets: Array.isArray(parsedData.targets) ? parsedData.targets : [],
             targetHistory: Array.isArray(parsedData.targetHistory) ? parsedData.targetHistory : [],
-            quotes: Array.isArray(parsedData.quotes) && parsedData.quotes.length > 0 ? parsedData.quotes : defaultQuotes.map((text, index) => ({ id: index, text }))
+            quotes: Array.isArray(parsedData.quotes) && parsedData.quotes.length > 0 ? parsedData.quotes : defaultQuotes.map((text, index) => ({ id: index, text })),
+            hydration: Array.isArray(parsedData.hydration) ? parsedData.hydration : []
           }
           
           // Cleanup deleted items older than 2 days
@@ -284,7 +286,7 @@ function App() {
           // Filter out 'goals' from saved section order if it exists
           const filteredOrder = Array.isArray(parsedOrder) 
             ? parsedOrder.filter(section => section !== 'goals')
-            : ['dashboard', 'metrics', 'workouts', 'journal', 'skates', 'calendar', 'onerm', 'analytics', 'chatbot', 'quotes', 'history']
+            : ['dashboard', 'metrics', 'skates', 'workouts', 'onerm', 'journal', 'goalsetter', 'hydration', 'quotes', 'calendar', 'analytics', 'chatbot']
           setSectionOrder(filteredOrder)
         } catch (e) {
           console.error('Error parsing section order:', e)
@@ -356,7 +358,8 @@ function App() {
     onerm: { icon: BarChart2, label: '1RM Calculator' },
     analytics: { icon: BarChart3, label: 'Analytics' },
     chatbot: { icon: MessageSquare, label: 'Personal Assistant' },
-    quotes: { icon: Star, label: 'Quotes' }
+    quotes: { icon: Star, label: 'Quotes' },
+    hydration: { icon: Droplets, label: 'Hydration' }
   }
 
   const addNumberEntry = (name, value, pinned = false) => {
@@ -1096,6 +1099,9 @@ function App() {
             )}
             {activeTab === 'quotes' && (
               <QuotesView data={data} onAdd={addQuote} onDelete={deleteQuote} onReset={resetQuotes} darkMode={darkMode} />
+            )}
+            {activeTab === 'hydration' && (
+              <HydrationTracker data={data} setData={setData} darkMode={darkMode} logAction={logAction} />
             )}
           </div>
         </main>
@@ -4130,6 +4136,19 @@ function CalendarView({ data, onAddScheduled, onDeleteScheduled, darkMode }) {
       }
     })
     
+    // Get hydration progress on this date
+    data.hydration.forEach(h => {
+      if (h.localDate === dateStr || new Date(h.date).toLocaleDateString() === dateStr) {
+        progress.push({
+          type: 'hydration',
+          name: 'Water Intake',
+          currentValue: h.currentIntake,
+          target: h.target,
+          percentage: h.target > 0 ? Math.round((h.currentIntake / h.target) * 100) : 0
+        })
+      }
+    })
+    
     return progress
   }
   
@@ -4696,7 +4715,14 @@ function Chatbot({ data, darkMode }) {
         title: d.title || d.name,
         deletedAt: d.deletedAt
       })),
-      streaks: data.streaks || {}
+      streaks: data.streaks || {},
+      hydration: (data.hydration || []).map(h => ({
+        currentIntake: h.currentIntake,
+        target: h.target,
+        glassSize: h.glassSize,
+        date: h.date,
+        localDate: h.localDate
+      }))
     }
   }
 
@@ -4840,11 +4866,8 @@ Provide your answers in a clear, conversational format.`
               className={`w-full px-3 py-2 text-sm ${darkMode ? 'bg-slate-600 border-slate-500 text-white' : 'bg-white border-slate-300 text-slate-900'} border rounded-lg`}
             >
               <option value="meta-llama/llama-3.1-70b-instruct">Llama 3.1 70B (Versatile)</option>
-              <option value="meta-llama/llama-3.1-8b-instruct">Llama 3.1 8B (Fast)</option>
-              <option value="meta-llama/llama-3-70b-instruct">Llama 3 70B</option>
-              <option value="meta-llama/llama-3-8b-instruct">Llama 3 8B</option>
-              <option value="mistralai/mistral-7b-instruct">Mistral 7B</option>
-              <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
+              <option value="nvidia/nemotron-3-ultra-550b-a55b:free">NVIDIA Nemotron 3 Ultra 550B (Free)</option>
+              <option value="deepseek/deepseek-v4-flash">DeepSeek V4 Flash</option>
             </select>
           </div>
         </div>
@@ -5582,6 +5605,228 @@ function QuotesView({ data, onAdd, onDelete, onReset, darkMode }) {
           <div className={`text-center py-12 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
             <p>No custom quotes yet. Add your first quote above!</p>
           </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function HydrationTracker({ data, setData, darkMode, logAction }) {
+  const today = new Date().toLocaleDateString()
+  const todayData = data.hydration?.find(h => h.localDate === today)
+  
+  const [currentIntake, setCurrentIntake] = useState(todayData?.currentIntake || 0)
+  const [target, setTarget] = useState(todayData?.target || 64) // Default 64 oz (8 glasses of 8 oz)
+  const [glassSize, setGlassSize] = useState(todayData?.glassSize || 8)
+  const [customAmount, setCustomAmount] = useState('')
+
+  // Sync state with data when data changes
+  useEffect(() => {
+    if (todayData) {
+      setCurrentIntake(todayData.currentIntake || 0)
+      setTarget(todayData.target || 64)
+      setGlassSize(todayData.glassSize || 8)
+    }
+  }, [todayData])
+
+  const saveHydrationData = () => {
+    const now = new Date()
+    const existingIndex = data.hydration?.findIndex(h => h.localDate === today) || -1
+
+    const hydrationEntry = {
+      id: existingIndex >= 0 ? data.hydration[existingIndex].id : Date.now(),
+      currentIntake,
+      target,
+      glassSize,
+      date: now.toISOString(),
+      localDate: today
+    }
+
+    setData(prev => {
+      const newHydration = [...(prev.hydration || [])]
+      if (existingIndex >= 0) {
+        newHydration[existingIndex] = hydrationEntry
+      } else {
+        newHydration.push(hydrationEntry)
+      }
+      return { ...prev, hydration: newHydration }
+    })
+  }
+
+  const addWater = () => {
+    const newIntake = currentIntake + glassSize
+    setCurrentIntake(newIntake)
+    logAction('added', 'hydration', 'water', { amount: glassSize, total: newIntake })
+    setTimeout(() => saveHydrationData(), 0)
+  }
+
+  const removeWater = () => {
+    const newIntake = Math.max(0, currentIntake - glassSize)
+    setCurrentIntake(newIntake)
+    logAction('removed', 'hydration', 'water', { amount: glassSize, total: newIntake })
+    setTimeout(() => saveHydrationData(), 0)
+  }
+
+  const addCustomAmount = () => {
+    const amount = parseFloat(customAmount)
+    if (isNaN(amount) || amount <= 0) return
+    
+    const newIntake = currentIntake + amount
+    setCurrentIntake(newIntake)
+    setCustomAmount('')
+    logAction('added', 'hydration', 'water', { amount, total: newIntake })
+    setTimeout(() => saveHydrationData(), 0)
+  }
+
+  const updateTarget = (newTarget) => {
+    const parsedTarget = parseFloat(newTarget)
+    if (isNaN(parsedTarget) || parsedTarget <= 0) return
+    setTarget(parsedTarget)
+    logAction('updated', 'hydration', 'target', { newTarget: parsedTarget })
+    setTimeout(() => saveHydrationData(), 0)
+  }
+
+  const updateGlassSize = (newSize) => {
+    setGlassSize(parseInt(newSize))
+    logAction('updated', 'hydration', 'glass size', { newSize })
+    setTimeout(() => saveHydrationData(), 0)
+  }
+
+  const percentage = Math.min(100, (currentIntake / target) * 100)
+
+  return (
+    <div className="space-y-6">
+      <div className={`${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-lg shadow-sm border p-6`}>
+        <h2 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-slate-900'} mb-6`}>Daily Hydration Tracker</h2>
+        
+        <div className="flex flex-col md:flex-row gap-8 items-center">
+          {/* Water Glass Visualization */}
+          <div className="flex-1 flex justify-center">
+            <div className="relative">
+              {/* Glass container */}
+              <div className={`w-32 h-48 rounded-b-3xl rounded-t-lg border-4 ${darkMode ? 'border-slate-600 bg-slate-700' : 'border-slate-300 bg-slate-100'} overflow-hidden relative`}>
+                {/* Water fill */}
+                <div 
+                  className="absolute bottom-0 left-0 right-0 bg-blue-400 transition-all duration-500 ease-out"
+                  style={{ height: `${percentage}%` }}
+                >
+                  {/* Water wave effect */}
+                  <div className="absolute top-0 left-0 right-0 h-2 bg-blue-300 opacity-50 animate-pulse" />
+                </div>
+                
+                {/* Glass shine effect */}
+                <div className="absolute top-0 left-2 w-2 h-full bg-white/10 rounded-full" />
+              </div>
+              
+              {/* Percentage label */}
+              <div className={`text-center mt-4 font-bold text-2xl ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                {percentage.toFixed(0)}%
+              </div>
+            </div>
+          </div>
+
+          {/* Controls */}
+          <div className="flex-1 space-y-4">
+            <div>
+              <label className={`block text-sm mb-2 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                Current Intake: <span className={`font-bold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>{currentIntake} oz</span>
+              </label>
+              <div className="flex gap-2">
+                <button
+                  onClick={removeWater}
+                  className={`flex-1 px-4 py-2 ${darkMode ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-red-500 text-white hover:bg-red-600'} rounded-lg transition-colors`}
+                >
+                  - {glassSize} oz
+                </button>
+                <button
+                  onClick={addWater}
+                  className={`flex-1 px-4 py-2 ${darkMode ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-blue-500 text-white hover:bg-blue-600'} rounded-lg transition-colors`}
+                >
+                  + {glassSize} oz
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className={`block text-sm mb-2 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                Add Custom Amount
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  value={customAmount}
+                  onChange={(e) => setCustomAmount(e.target.value)}
+                  placeholder="oz"
+                  className={`flex-1 px-3 py-2 ${darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'} border rounded-lg`}
+                  min="0"
+                  step="0.5"
+                />
+                <button
+                  onClick={addCustomAmount}
+                  className={`px-4 py-2 ${darkMode ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-green-500 text-white hover:bg-green-600'} rounded-lg transition-colors`}
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className={`block text-sm mb-2 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                Daily Target: {target} oz
+              </label>
+              <input
+                type="number"
+                value={target}
+                onChange={(e) => updateTarget(e.target.value)}
+                className={`w-full px-3 py-2 ${darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'} border rounded-lg`}
+                min="1"
+                step="1"
+              />
+            </div>
+
+            <div>
+              <label className={`block text-sm mb-2 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                Glass Size: {glassSize} oz
+              </label>
+              <select
+                value={glassSize}
+                onChange={(e) => updateGlassSize(parseInt(e.target.value))}
+                className={`w-full px-3 py-2 ${darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'} border rounded-lg`}
+              >
+                <option value={4}>4 oz</option>
+                <option value={8}>8 oz</option>
+                <option value={12}>12 oz</option>
+                <option value={16}>16 oz</option>
+                <option value={20}>20 oz</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Hydration History */}
+      <div className={`${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-lg shadow-sm border p-6`}>
+        <h2 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-slate-900'} mb-4`}>Hydration History</h2>
+        {data.hydration && data.hydration.length > 0 ? (
+          <div className="space-y-2">
+            {data.hydration.slice().reverse().slice(0, 7).map((entry) => (
+              <div key={entry.id} className={`flex items-center justify-between p-3 ${darkMode ? 'bg-slate-700' : 'bg-slate-50'} rounded-lg`}>
+                <div>
+                  <p className={`text-sm ${darkMode ? 'text-white' : 'text-slate-900'}`}>{entry.localDate}</p>
+                  <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                    {entry.currentIntake} oz / {entry.target} oz target
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className={`text-sm font-semibold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                    {Math.min(100, (entry.currentIntake / entry.target) * 100).toFixed(0)}%
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>No hydration data yet. Start tracking your water intake!</p>
         )}
       </div>
     </div>
