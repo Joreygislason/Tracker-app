@@ -5692,7 +5692,7 @@ function HydrationTracker({ data, setData, darkMode, logAction }) {
     setTimeout(() => saveHydrationData(), 0)
   }
 
-  const percentage = Math.min(100, (currentIntake / target) * 100)
+  const percentage = target > 0 ? Math.min(100, (currentIntake / target) * 100) : 0
 
   return (
     <div className="space-y-6">
@@ -5819,7 +5819,7 @@ function HydrationTracker({ data, setData, darkMode, logAction }) {
                 </div>
                 <div className="text-right">
                   <p className={`text-sm font-semibold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
-                    {Math.min(100, (entry.currentIntake / entry.target) * 100).toFixed(0)}%
+                    {entry.target > 0 ? Math.min(100, (entry.currentIntake / entry.target) * 100).toFixed(0) : 0}%
                   </p>
                 </div>
               </div>
